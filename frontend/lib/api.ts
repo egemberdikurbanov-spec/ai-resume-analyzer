@@ -3,7 +3,12 @@
  * Uses NEXT_PUBLIC_API_BASE_URL in production and falls back to localhost for development.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://cveval.onrender.com"
+const DEFAULT_API_BASE =
+  typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:8080"
+    : "https://cveval.onrender.com"
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE
 
 // =============================================================================
 // Types

@@ -249,7 +249,21 @@ export function CVCheckApp() {
         
         setAppState("results")
       } else if (evaluation.status === "FAILED") {
-        throw new Error("Evaluation failed. Please try again.")
+        let backendError: string | null = null
+        try {
+          const parsed = JSON.parse(evaluation.aiResult)
+          if (parsed && typeof parsed === "object" && "error" in parsed) {
+            backendError = (parsed as { error?: string }).error || null
+          }
+        } catch {
+          backendError = null
+        }
+
+        throw new Error(
+          backendError
+            ? `Evaluation failed: ${backendError}`
+            : "Evaluation failed. Please try again."
+        )
       } else if (evaluation.status === "PENDING") {
         // Handle pending status - poll or show message
         throw new Error("Evaluation is still processing. Please wait and try again.")

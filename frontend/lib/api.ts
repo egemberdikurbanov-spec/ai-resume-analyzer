@@ -1,15 +1,10 @@
 /**
  * API Service Layer
- * Uses NEXT_PUBLIC_API_BASE_URL in production and falls back to localhost for development.
+ * Uses NEXT_PUBLIC_API_BASE_URL if configured.
+ * For local frontend connecting to the deployed backend, it defaults to the deployed API URL.
  */
 
-const DEFAULT_API_BASE =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? "http://localhost:8080"
-    : "https://cveval.onrender.com"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://cveval.onrender.com"
 
 // =============================================================================
 // Types

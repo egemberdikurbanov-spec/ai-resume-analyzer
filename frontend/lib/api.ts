@@ -40,12 +40,13 @@ export interface Evaluation {
   cvFilename: string
   jobDescription: string
   status: "COMPLETED" | "PENDING" | "FAILED"
-  aiResult: string // JSON string - must be parsed with JSON.parse()
+  aiResult?: string // JSON string - must be parsed with JSON.parse()
+  result?: unknown // Some backend variants return a result object directly
   createdAt: string
   completedAt: string | null
 }
 
-export interface ParsedEvaluation extends Omit<Evaluation, "aiResult"> {
+export interface ParsedEvaluation extends Omit<Evaluation, "aiResult" | "result"> {
   aiResult: AIResult
 }
 
@@ -287,8 +288,65 @@ export async function getEvaluation(evaluationId: number): Promise<Evaluation> {
  * Parse the aiResult string from an evaluation into a typed object
  * aiResult is returned as a JSON string from the API and must be parsed
  */
-export function parseAIResult(aiResultString: string): AIResult {
-  return JSON.parse(aiResultString) as AIResult
+type RawAIResult = unknown
+
+export function parseAIResult(rawAIResult: RawAIResult): AIResult {
+  let parsed: any = rawAIResult
+
+  if (typeof rawAIResult === "string") {
+    try {
+      parsed = JSON.parse(rawAIResult)
+    } catch {
+      parsed = {}
+    }
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    parsed = {}
+  }
+
+  const matchScore =
+    typeof parsed.matchScore === "number"
+      ? parsed.matchScore
+      : typeof parsed.match_percentage === "number"
+      ? parsed.match_percentage
+      : 0
+
+  const strengths =
+    Array.isArray(parsed.strengths)
+      ? parsed.strengths
+      : Array.isArray(parsed.strong_points)
+      ? parsed.strong_points
+      : []
+
+  const gaps =
+    Array.isArray(parsed.gaps)
+      ? parsed.gaps
+      : Array.isArray(parsed.weak_points)
+      ? parsed.weak_points
+      : []
+
+  const recommendation =
+    typeof parsed.recommendation === "string"
+      ? parsed.recommendation
+      : Array.isArray(parsed.recommendations)
+      ? parsed.recommendations.join(" ")
+      : ""
+
+  const summary =
+    typeof parsed.summary === "string"
+      ? parsed.summary
+      : typeof parsed.description === "string"
+      ? parsed.description
+      : ""
+
+  return {
+    matchScore,
+    strengths,
+    gaps,
+    recommendation,
+    summary,
+  }
 }
 
 /**
@@ -302,7 +360,7 @@ export function parseEvaluation(evaluation: Evaluation): ParsedEvaluation | null
   
   return {
     ...evaluation,
-    aiResult: parseAIResult(evaluation.aiResult),
+    aiResult: parseAIResult(evaluation.aiResult ?? evaluation.result),
   }
 }
 
@@ -314,6 +372,6 @@ export function parseEvaluations(evaluations: Evaluation[]): ParsedEvaluation[] 
     .filter((ev) => ev.status === "COMPLETED")
     .map((ev) => ({
       ...ev,
-      aiResult: parseAIResult(ev.aiResult),
+      aiResult: parseAIResult(ev.aiResult ?? ev.result),
     }))
 }

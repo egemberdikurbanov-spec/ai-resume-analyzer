@@ -187,9 +187,8 @@ export function CVCheckApp() {
       const evaluation = await submitEvaluation(uploadedCvId, jobDescriptionText)
       
       // Check if evaluation completed successfully
-      if (evaluation.status === "COMPLETED" && evaluation.aiResult) {
-        // Parse the AI result (it's a JSON string)
-        const aiResult = parseAIResult(evaluation.aiResult)
+      if (evaluation.status === "COMPLETED") {
+        const aiResult = parseAIResult(evaluation.aiResult ?? evaluation.result)
         
         // Set the overall score
         setOverallScore(aiResult.matchScore)
@@ -251,7 +250,11 @@ export function CVCheckApp() {
       } else if (evaluation.status === "FAILED") {
         let backendError: string | null = null
         try {
-          const parsed = JSON.parse(evaluation.aiResult)
+          const rawErrorResult = evaluation.aiResult ?? evaluation.result
+          const parsed = typeof rawErrorResult === "string"
+            ? JSON.parse(rawErrorResult)
+            : rawErrorResult
+
           if (parsed && typeof parsed === "object" && "error" in parsed) {
             backendError = (parsed as { error?: string }).error || null
           }
@@ -761,7 +764,7 @@ export function CVCheckApp() {
                   <div ref={feedbackSectionRef} id="feedback-section" className="scroll-mt-20 relative z-10">
                     <h3 className="font-semibold text-lg mb-4 text-white">Detailed Feedback & AI Recommendations</h3>
                     <div className="space-y-4">
-                      {mockFeedback.map((item) => (
+                      {feedback.map((item) => (
                         <FeedbackCard key={item.id} item={item} />
                       ))}
                     </div>
